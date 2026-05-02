@@ -12,5 +12,9 @@ export default [
         sourceType: 'module',
       },
     },
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      'vue/no-undef-properties': 'error',
+    }
   },
 ]
