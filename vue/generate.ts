@@ -48,7 +48,25 @@ const { ast } = parseForESLint(source, {
 })
 const scriptProgram = stripTS({ type: 'Program', body: ast.body, sourceType: ast.sourceType ?? 'module' })
 const scriptCode = astringGenerate(scriptProgram as any)
-writeFileSync(resolve(outDir, 'eslint.js'), scriptCode)
+
+// Template expressions (each `{{ ... }}` / `:attr="..."` is a VExpressionContainer
+// whose `.expression` is plain ESTree). eslint-plugin-vue rules visit these.
+const templateExprs: any[] = []
+function walkTemplate(node: any) {
+  if (!node || typeof node !== 'object') return
+  if (node.type === 'VExpressionContainer' && node.expression) {
+    templateExprs.push(node.expression)
+  }
+  for (const child of node.children ?? []) walkTemplate(child)
+  for (const attr of node.startTag?.attributes ?? []) walkTemplate(attr.value)
+}
+walkTemplate(ast.templateBody)
+const templateStmts = templateExprs.map(e => ({ type: 'ExpressionStatement', expression: e }))
+const templateBlock = templateStmts.length
+  ? '\n// template expressions:\n' + astringGenerate(stripTS({ type: 'Program', sourceType: 'module', body: templateStmts }) as any)
+  : ''
+
+writeFileSync(resolve(outDir, 'eslint.js'), scriptCode + templateBlock)
 
 console.log('Wrote', resolve(outDir, 'virtual.ts'))
 console.log('Wrote', resolve(outDir, 'eslint.js'))
