@@ -14,5 +14,8 @@ export default [
         sourceType: 'module',
       },
     },
+    rules: {
+      'no-undef': 'error',
+    },
   },
 ]

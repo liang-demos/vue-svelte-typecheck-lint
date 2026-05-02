@@ -1,8 +1,7 @@
-<script>
-  export let prop;
-  let count = 0;
+<script lang="ts">
+  import { writable } from 'svelte/store';
+  const user = writable({ name: 'liang' });
 </script>
 
-<button>
-  {count}
-</button>
+<p>{$user.age}</p>
+<p>{missing}</p>
