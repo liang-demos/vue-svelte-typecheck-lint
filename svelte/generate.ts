@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { svelte2tsx } from 'svelte2tsx'
 import { parseForESLint } from 'svelte-eslint-parser'
 import { generate as astringGenerate } from 'astring'
+import { stripTS } from './strip-ts.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const sourcePath = resolve(here, 'source.svelte')
@@ -26,14 +27,29 @@ const { ast } = parseForESLint(source, {
   ecmaVersion: 'latest',
   sourceType: 'module',
 })
-const scriptBody = ast.body.flatMap((n: any) =>
-  n.type === 'SvelteScriptElement' ? n.body : [],
+function normalizeSvelte(node: any): any {
+  if (Array.isArray(node)) return node.map(normalizeSvelte)
+  if (node && typeof node === 'object') {
+    const out: any = {}
+    for (const [k, v] of Object.entries(node)) {
+      if (k === 'parent') continue
+      out[k] = normalizeSvelte(v)
+    }
+    if (out.type === 'SvelteReactiveStatement') out.type = 'LabeledStatement'
+    return out
+  }
+  return node
+}
+const scriptBody = normalizeSvelte(
+  ast.body.flatMap((n: any) =>
+    n.type === 'SvelteScriptElement' ? n.body : [],
+  ),
 )
-const scriptProgram = {
+const scriptProgram = stripTS({
   type: 'Program',
   sourceType: 'module',
   body: scriptBody,
-}
+})
 const scriptCode = astringGenerate(scriptProgram as any)
 writeFileSync(resolve(outDir, 'eslint.js'), scriptCode)
 

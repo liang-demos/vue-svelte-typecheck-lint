@@ -8,6 +8,7 @@ import {
 } from '@vue/language-core'
 import { parseForESLint } from 'vue-eslint-parser'
 import { generate as astringGenerate } from 'astring'
+import { stripTS } from './strip-ts.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const sourcePath = resolve(here, 'source.vue')
@@ -45,7 +46,7 @@ const { ast } = parseForESLint(source, {
   ecmaVersion: 'latest',
   parser: '@typescript-eslint/parser',
 })
-const scriptProgram = { ...ast, type: 'Program', body: ast.body, sourceType: ast.sourceType ?? 'module' }
+const scriptProgram = stripTS({ type: 'Program', body: ast.body, sourceType: ast.sourceType ?? 'module' })
 const scriptCode = astringGenerate(scriptProgram as any)
 writeFileSync(resolve(outDir, 'eslint.js'), scriptCode)
 
